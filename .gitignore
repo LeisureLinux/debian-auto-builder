@@ -5,3 +5,4 @@ bin/
 .gocache/
 .env
 local-config.yaml
+/server
