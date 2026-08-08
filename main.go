@@ -65,6 +65,38 @@ type ScanResult struct {
 }
 
 func main() {
+	// One-shot CLI mode: ./debian-auto-builder -scan [tracked.json]
+	// Used by GitHub Actions so no server is needed.
+	if len(os.Args) > 1 && os.Args[1] == "-scan" {
+		path := "tracked.json"
+		if len(os.Args) > 2 {
+			path = os.Args[2]
+		}
+		pkgs, err := loadTrackedPackages(path)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Failed to load %s: %v\n", path, err)
+			os.Exit(1)
+		}
+		results, err := runScan(pkgs)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Scan failed: %v\n", err)
+			os.Exit(1)
+		}
+		out, _ := json.MarshalIndent(results, "", "  ")
+		fmt.Println(string(out))
+
+		gaps := 0
+		for _, r := range results {
+			if r.GapDetected {
+				gaps++
+			}
+		}
+		if gaps > 0 {
+			os.Exit(1) // signal gaps to CI via exit code
+		}
+		return
+	}
+
 	http.HandleFunc("/scan", handleScan)
 	http.HandleFunc("/auto-scan", handleAutoScan)
 	http.HandleFunc("/health", handleHealth)
@@ -93,21 +125,7 @@ func handleScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	results := make([]ScanResult, len(trackedPackages))
-
-	for i, pkg := range trackedPackages {
-		result := ScanPackage(pkg)
-		results[i] = result
-
-		if result.GapDetected {
-			fmt.Printf("⚠️ Package %s: gap detected, triggering build\n", pkg.Package)
-			triggerBuildForPackage(pkg)
-		} else if result.InDebian {
-			fmt.Printf("ℹ️ Package %s: Already in Debian (skip)\n", pkg.Package)
-		} else if result.Action == "rehost" {
-			fmt.Printf("✅ Package %s: GitHub has all arches, rehost only\n", pkg.Package)
-		}
-	}
+	results, _ := runScan(trackedPackages)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
@@ -137,23 +155,15 @@ func handleAutoScan(w http.ResponseWriter, r *http.Request) {
 		trackedPackages = loaded
 	}
 
-	results := make([]ScanResult, len(trackedPackages))
-	builds := 0
-	for i, pkg := range trackedPackages {
-		result := ScanPackage(pkg)
-		results[i] = result
-		if result.GapDetected {
-			builds++
-			fmt.Printf("⚠️ Package %s: gap detected, triggering build\n", pkg.Package)
-			triggerBuildForPackage(pkg)
-		} else if result.InDebian {
-			fmt.Printf("ℹ️ Package %s: Already in Debian (skip)\n", pkg.Package)
-		} else if result.Action == "rehost" {
-			fmt.Printf("✅ Package %s: GitHub has all arches, rehost only\n", pkg.Package)
-		}
-	}
+	results, _ := runScan(trackedPackages)
 
 	// Non-JSON summary header for quick CLI/curl use (keeps JSON body clean).
+	builds := 0
+	for _, r := range results {
+		if r.GapDetected {
+			builds++
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Scan-Count", fmt.Sprintf("%d", len(trackedPackages)))
 	w.Header().Set("X-Gap-Count", fmt.Sprintf("%d", builds))
@@ -199,6 +209,28 @@ func ScanPackage(pkg TrackedPackage) ScanResult {
 }
 
 // determineAction decides skip/rehost/build based on detected gaps.
+// runScan scans all packages, triggers builds for gaps, and returns results.
+func runScan(pkgs []TrackedPackage) ([]ScanResult, error) {
+	results := make([]ScanResult, len(pkgs))
+	for i, pkg := range pkgs {
+		result := ScanPackage(pkg)
+		results[i] = result
+
+		switch {
+		case result.GapDetected:
+			fmt.Printf("⚠️ Package %s: gap detected, triggering build\n", pkg.Package)
+			triggerBuildForPackage(pkg)
+		case result.InDebian:
+			fmt.Printf("ℹ️ Package %s: Already in Debian (skip)\n", pkg.Package)
+		case result.Action == "rehost":
+			fmt.Printf("✅ Package %s: GitHub has all arches, rehost only\n", pkg.Package)
+		default:
+			fmt.Printf("ℹ️ Package %s: %s\n", pkg.Package, result.Action)
+		}
+	}
+	return results, nil
+}
+
 func determineAction(result *ScanResult) {
 	if result.InDebian {
 		result.Action = "skip"

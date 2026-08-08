@@ -20,6 +20,19 @@ curl http://localhost:8080/health
 # Response: {"status": "ok"}
 ```
 
+### 命令行模式（用于 GitHub Actions，无需运行服务器）
+
+以一次性命令方式扫描 `tracked.json`，可用于 CI：
+
+```bash
+# 扫描 tracked.json，打印 JSON 结果
+go run . -scan tracked.json
+
+# 有缺口时退出码为 1，无缺口为 0（供 CI 判断）
+./server -scan tracked.json
+echo $?
+```
+
 ### GET/POST /auto-scan
 全自动化扫描：从 `tracked.json` 加载所有 tracked packages，扫描缺口，并对检测到缺口的包触发构建流程。
 
@@ -116,6 +129,6 @@ curl -X POST https://api.github.com/repos/LeisureLinux/apt-repo/dispatches \
 - [ ] 添加 Debian Packages.xz 本地缓存和快速查询（离线扫描）
 - [x] 支持批量从 tracked.json 读取 packages (`/auto-scan`)
 - [ ] Web UI for monitoring gaps and build status  
-- [ ] Slack/Discord webhook notifications
+- [x] GitHub Actions 自动扫描（CLI 模式，无需公开端口）
 - [ ] Rate limit protection to avoid GitHub API throttling
 
