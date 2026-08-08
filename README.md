@@ -101,7 +101,8 @@ curl -X POST https://api.github.com/repos/LeisureLinux/apt-repo/dispatches \
   -d '{"event_type":"auto-build-detected","client_payload":{"package":"gdu"}}' \
 ```
 
-需要配置 GITHUB_TOKEN 环境变量。
+需要配置 `GITHUB_TOKEN`（或 `BUILDER_PAT`）环境变量，目标仓库可通过
+`BUILD_REPO_OWNER` / `BUILD_REPO_NAME` 覆盖，默认是 `LeisureLinux/deb-builder`。
 
 ### Webhook to Trigger Debian Package Build
 

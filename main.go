@@ -257,21 +257,85 @@ func hasDebAsset(assets []Asset) bool {
 	return false
 }
 
+// BuildRepoOwner / BuildRepoName are the target repo that receives dispatch
+// events and actually builds the .deb packages. Overridable via env.
+const (
+	BuildRepoOwner = "LeisureLinux"
+	BuildRepoName  = "deb-builder"
+	BuildEventType = "auto-build-required"
+)
+
 func triggerBuildForPackage(pkg TrackedPackage) {
-	// 这里可以:
-	// 1. POST to apt-repo workflow API
-	// 2. Create a GitHub issue/PR with build recipe
-	// 3. Send webhook notification
-
 	fmt.Printf("🚀 Triggering build for %s/%s\n", pkg.Owner, pkg.Repo)
-
-	// Example: dispatch GitHub Actions workflow
 	dispatchWorkflow(pkg)
 }
 
+// dispatchWorkflow sends a GitHub repository_dispatch event to the build repo
+// so its CI pipeline can build the package from source. Requires GITHUB_TOKEN
+// (or BUILDER_PAT) to be set; otherwise it logs a warning and skips.
 func dispatchWorkflow(pkg TrackedPackage) {
-	// 这里可以触发 apt-repo 或 ghdeb 的 GitHub Actions workflow
-	// 需要 GITHUB_TOKEN 作为环境变量
+	owner := getenv("BUILD_REPO_OWNER", BuildRepoOwner)
+	repo := getenv("BUILD_REPO_NAME", BuildRepoName)
 
-	fmt.Printf("Would trigger CI for %s... (requires GITHUB_TOKEN)\n", pkg.Package)
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		token = os.Getenv("BUILDER_PAT")
+	}
+	if token == "" {
+		fmt.Printf("⚠️ No GITHUB_TOKEN/BUILDER_PAT set; skipping dispatch for %s\n", pkg.Package)
+		return
+	}
+
+	url := fmt.Sprintf("%s/%s/%s/dispatches", GitHubAPIBase, owner, repo)
+
+	payload := map[string]interface{}{
+		"event_type": BuildEventType,
+		"client_payload": map[string]string{
+			"package": pkg.Package,
+			"owner":   pkg.Owner,
+			"repo":    pkg.Repo,
+			"version": pkg.VersionTag,
+			"source":  "debian-auto-builder",
+			"arch":    "amd64,arm64",
+		},
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Printf("❌ Failed to encode dispatch payload: %v\n", err)
+		return
+	}
+
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(string(body)))
+	if err != nil {
+		fmt.Printf("❌ Failed to create dispatch request: %v\n", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("❌ Dispatch to %s/%s failed: %v\n", owner, repo, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	switch {
+	case resp.StatusCode == http.StatusNoContent:
+		fmt.Printf("✅ Dispatched build for %s to %s/%s (event=%s)\n", pkg.Package, owner, repo, BuildEventType)
+	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
+		fmt.Printf("❌ Dispatch to %s/%s rejected (%d): token lacks permission\n", owner, repo, resp.StatusCode)
+	default:
+		respBody, _ := io.ReadAll(resp.Body)
+		fmt.Printf("⚠️ Dispatch to %s/%s returned %d: %s\n", owner, repo, resp.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+}
+
+// getenv returns the value of env var key, or def if unset/empty.
+func getenv(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }
