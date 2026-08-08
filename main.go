@@ -66,6 +66,7 @@ type ScanResult struct {
 
 func main() {
 	http.HandleFunc("/scan", handleScan)
+	http.HandleFunc("/auto-scan", handleAutoScan)
 	http.HandleFunc("/health", handleHealth)
 	fmt.Println("Server starting on :8080")
 
@@ -110,6 +111,65 @@ func handleScan(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(results)
+}
+
+func handleAutoScan(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// If a body was provided, use it; otherwise fall back to tracked.json.
+	var trackedPackages []TrackedPackage
+	body, _ := io.ReadAll(r.Body)
+	if len(strings.TrimSpace(string(body))) > 0 {
+		if err := json.Unmarshal(body, &trackedPackages); err != nil {
+			http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+			return
+		}
+	}
+	if len(trackedPackages) == 0 {
+		loaded, err := loadTrackedPackages("tracked.json")
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed to load tracked.json: %v", err), http.StatusInternalServerError)
+			return
+		}
+		trackedPackages = loaded
+	}
+
+	results := make([]ScanResult, len(trackedPackages))
+	builds := 0
+	for i, pkg := range trackedPackages {
+		result := ScanPackage(pkg)
+		results[i] = result
+		if result.GapDetected {
+			builds++
+			fmt.Printf("⚠️ Package %s: gap detected, triggering build\n", pkg.Package)
+			triggerBuildForPackage(pkg)
+		} else if result.InDebian {
+			fmt.Printf("ℹ️ Package %s: Already in Debian (skip)\n", pkg.Package)
+		} else if result.Action == "rehost" {
+			fmt.Printf("✅ Package %s: GitHub has all arches, rehost only\n", pkg.Package)
+		}
+	}
+
+	// Non-JSON summary header for quick CLI/curl use (keeps JSON body clean).
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Scan-Count", fmt.Sprintf("%d", len(trackedPackages)))
+	w.Header().Set("X-Gap-Count", fmt.Sprintf("%d", builds))
+	json.NewEncoder(w).Encode(results)
+}
+
+func loadTrackedPackages(path string) ([]TrackedPackage, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var pkgs []TrackedPackage
+	if err := json.Unmarshal(data, &pkgs); err != nil {
+		return nil, err
+	}
+	return pkgs, nil
 }
 
 func ScanPackage(pkg TrackedPackage) ScanResult {

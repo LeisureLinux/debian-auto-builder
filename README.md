@@ -20,6 +20,23 @@ curl http://localhost:8080/health
 # Response: {"status": "ok"}
 ```
 
+### GET/POST /auto-scan
+全自动化扫描：从 `tracked.json` 加载所有 tracked packages，扫描缺口，并对检测到缺口的包触发构建流程。
+
+```bash
+# 使用 tracked.json 中的全部包（自动加载）
+curl -X POST http://localhost:8080/auto-scan
+
+# 也可以传自定义 payload（覆盖 tracked.json）
+curl -X POST http://localhost:8080/auto-scan \
+  -H "Content-Type: application/json" \
+  -d '[{"owner":"dundee","repo":"gdu","package":"gdu"}]'
+
+# 响应头会带上扫描统计：
+#   X-Scan-Count: 包总数
+#   X-Gap-Count:  检测到缺口的数量
+```
+
 ### POST /scan
 批量扫描 tracked packages，检测缺口并触发构建。
 
@@ -96,7 +113,7 @@ curl -X POST https://api.github.com/repos/LeisureLinux/apt-repo/dispatches \
 ## 🚀 下一步计划
 
 - [ ] 添加 Debian Packages.xz 本地缓存和快速查询（离线扫描）
-- [ ] 支持批量从 tracked.json 读取 packages
+- [x] 支持批量从 tracked.json 读取 packages (`/auto-scan`)
 - [ ] Web UI for monitoring gaps and build status  
 - [ ] Slack/Discord webhook notifications
 - [ ] Rate limit protection to avoid GitHub API throttling
