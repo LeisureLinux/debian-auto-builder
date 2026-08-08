@@ -1,0 +1,7 @@
+*.log
+*.tar.gz
+vendor/
+bin/
+.gocache/
+.env
+local-config.yaml

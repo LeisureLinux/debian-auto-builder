@@ -1,0 +1,12 @@
+[
+  {
+    "owner": "dundee",
+    "repo": "gdu",
+    "package": "gdu"
+  },
+  {
+    "owner": "BurntSushi",
+    "repo": "ripgrep",
+    "package": "ripgrep"
+  }
+]

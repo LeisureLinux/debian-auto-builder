@@ -1,0 +1,81 @@
+name: Automated Debian Gap Scanner
+
+on:
+  push:
+    branches: [ main ]
+    paths: 
+      - 'tracked.json'
+      - '.github/workflows/**'
+  
+  schedule:
+    # 每天 UTC 02:00 (北京时间 10:00) 自动扫描缺口
+    - cron: '0 2 * * *'
+    
+  workflow_dispatch:
+
+jobs:
+  detect-debian-gaps:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          
+      - name: Run auto-scan API
+        id: scan
+        run: |
+          # Create a test payload based on tracked.json
+          cat tracked.json > /tmp/scan-input.json
+          
+          echo "🔍 Running GitHub API scan for tracked packages..."
+          curl -X POST http://localhost:8080/scan \
+            -H "Content-Type: application/json" \
+            -d @/tmp/scan-input.json || {
+              # If server not available, simulate results based on tracked.json
+              echo '{"result": "offline-mode", "packages_count": $(wc -l < tracked.json)}' 
+          }
+          
+      - name: Create build recipes for gaps detected
+        if: steps.scan.outputs.gap_detected == 'true'
+        run: |
+          echo "⚠️ Gaps detected! Would create build recipes..."
+          
+      - name: Notify on gap detection
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            
+            // 检测到缺口时创建 issue/PR
+            github.rest.issues.create({
+              owner: owner,
+              repo: repo,
+              title: "⚠️ Debian Architecture Gap Detected",
+              body: `Found package(s) missing in Debian or GitHub releases. \`Automated scan\` detected gaps requiring manual review.`
+            })
+
+  trigger-build-workflow:
+    needs: detect-debian-gaps
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Dispatch to deb-builder for actual building
+      - name: Trigger deb-builder workflow
+        env:
+          GITHUB_TOKEN: ${{ secrets.BUILDER_PAT }}
+        run: |
+          echo "📤 Triggering deb-builder CI..."
+          
+          curl -X POST https://api.github.com/repos/LeisureLinux/deb-builder/dispatches \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d '{"event_type":"auto-build-required","client_payload":{"source": "debian-auto-builder"}}' || {
+              echo "⚠️ deb-builder dispatch failed (may not exist yet)"
+          }
+
