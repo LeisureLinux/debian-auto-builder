@@ -5,8 +5,8 @@
     "package": "gdu"
   },
   {
-    "owner": "BurntSushi",
-    "repo": "ripgrep",
-    "package": "ripgrep"
+    "owner": "getsops",
+    "repo": "sops",
+    "package": "sops"
   }
 ]
