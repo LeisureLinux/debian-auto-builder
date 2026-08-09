@@ -20,5 +20,15 @@
   {"owner": "sentriz", "repo": "cliphist", "package": "cliphist"},
   {"owner": "GoogleCloudPlatform", "repo": "cloudsql-proxy", "package": "cloudsql-proxy"},
   {"owner": "spf13", "repo": "cobra-cli", "package": "cobra-cli"},
-  {"owner": "google", "repo": "codesearch", "package": "codesearch"}
+  {"owner": "google", "repo": "codesearch", "package": "codesearch"},
+  {"owner": "containers", "repo": "storage", "package": "containers-storage"},
+  {"owner": "sigstore", "repo": "cosign", "package": "cosign"},
+  {"owner": "crowdsecurity", "repo": "crowdsec", "package": "crowdsec"},
+  {"owner": "crowdsecurity", "repo": "cs-custom-bouncer", "package": "crowdsec-custom-bouncer"},
+  {"owner": "crowdsecurity", "repo": "cs-firewall-bouncer", "package": "crowdsec-firewall-bouncer"},
+  {"owner": "vincent-petithory", "repo": "dataurl", "package": "dataurl"},
+  {"owner": "kong", "repo": "deck", "package": "deck"},
+  {"owner": "go-delve", "repo": "delve", "package": "delve"},
+  {"owner": "lxc", "repo": "distrobuilder", "package": "distrobuilder"},
+  {"owner": "keltia", "repo": "dmarc-cat", "package": "dmarc-cat"}
 ]
