@@ -30,5 +30,15 @@
   {"owner": "kong", "repo": "deck", "package": "deck"},
   {"owner": "go-delve", "repo": "delve", "package": "delve"},
   {"owner": "lxc", "repo": "distrobuilder", "package": "distrobuilder"},
-  {"owner": "keltia", "repo": "dmarc-cat", "package": "dmarc-cat"}
+  {"owner": "keltia", "repo": "dmarc-cat", "package": "dmarc-cat"},
+  {"owner": "DNSCrypt", "repo": "dnscrypt-proxy", "package": "dnscrypt-proxy"},
+  {"owner": "docker", "repo": "distribution", "package": "docker-registry"},
+  {"owner": "aymerick", "repo": "douceur", "package": "douceur"},
+  {"owner": "muesli", "repo": "duf", "package": "duf"},
+  {"owner": "go-easygen", "repo": "easygen", "package": "easygen"},
+  {"owner": "mattn", "repo": "efm-langserver", "package": "efm-langserver"},
+  {"owner": "mh-cbon", "repo": "emd", "package": "emd"},
+  {"owner": "tvzrn", "repo": "emptty", "package": "emptty"},
+  {"owner": "jhillyerd", "repo": "enmime", "package": "enmime"},
+  {"owner": "googleapis", "repo": "enterprise-certificate-proxy", "package": "enterprise-certificate-proxy-signer"}
 ]
