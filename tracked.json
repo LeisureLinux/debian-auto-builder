@@ -1,44 +1,262 @@
 [
-  {"owner": "dundee", "repo": "gdu", "package": "gdu"},
-  {"owner": "getsops", "repo": "sops", "package": "sops"},
-  {"owner": "FiloSottile", "repo": "age", "package": "age"},
-  {"owner": "makeworld-the-better-one", "repo": "amfora", "package": "amfora"},
-  {"owner": "anacrolix", "repo": "dms", "package": "anacrolix-dms"},
-  {"owner": "arduino", "repo": "arduino-builder", "package": "arduino-builder"},
-  {"owner": "tomnomnom", "repo": "assetfinder", "package": "assetfinder"},
-  {"owner": "DCSO", "repo": "balboa", "package": "balboa"},
-  {"owner": "containers", "repo": "buildah", "package": "buildah"},
-  {"owner": "linkedin", "repo": "Burrow", "package": "burrow"},
-  {"owner": "rootless-containers", "repo": "bypass4netns", "package": "bypass4netns"},
-  {"owner": "elliotchance", "repo": "c2go", "package": "c2go"},
-  {"owner": "caddyserver", "repo": "caddy", "package": "caddy"},
-  {"owner": "gen2brain", "repo": "cam2ip", "package": "cam2ip"},
-  {"owner": "pete911", "repo": "certinfo", "package": "certinfo"},
-  {"owner": "d-Rickyy-b", "repo": "certstream-server-go", "package": "certstream-server-go"},
-  {"owner": "checkpoint-restore", "repo": "checkpointctl", "package": "checkpointctl"},
-  {"owner": "bschaatsbergen", "repo": "cidr", "package": "cidr"},
-  {"owner": "sentriz", "repo": "cliphist", "package": "cliphist"},
-  {"owner": "GoogleCloudPlatform", "repo": "cloudsql-proxy", "package": "cloudsql-proxy"},
-  {"owner": "spf13", "repo": "cobra-cli", "package": "cobra-cli"},
-  {"owner": "google", "repo": "codesearch", "package": "codesearch"},
-  {"owner": "containers", "repo": "storage", "package": "containers-storage"},
-  {"owner": "sigstore", "repo": "cosign", "package": "cosign"},
-  {"owner": "crowdsecurity", "repo": "crowdsec", "package": "crowdsec"},
-  {"owner": "crowdsecurity", "repo": "cs-custom-bouncer", "package": "crowdsec-custom-bouncer"},
-  {"owner": "crowdsecurity", "repo": "cs-firewall-bouncer", "package": "crowdsec-firewall-bouncer"},
-  {"owner": "vincent-petithory", "repo": "dataurl", "package": "dataurl"},
-  {"owner": "kong", "repo": "deck", "package": "deck"},
-  {"owner": "go-delve", "repo": "delve", "package": "delve"},
-  {"owner": "lxc", "repo": "distrobuilder", "package": "distrobuilder"},
-  {"owner": "keltia", "repo": "dmarc-cat", "package": "dmarc-cat"},
-  {"owner": "DNSCrypt", "repo": "dnscrypt-proxy", "package": "dnscrypt-proxy"},
-  {"owner": "docker", "repo": "distribution", "package": "docker-registry"},
-  {"owner": "aymerick", "repo": "douceur", "package": "douceur"},
-  {"owner": "muesli", "repo": "duf", "package": "duf"},
-  {"owner": "go-easygen", "repo": "easygen", "package": "easygen"},
-  {"owner": "mattn", "repo": "efm-langserver", "package": "efm-langserver"},
-  {"owner": "mh-cbon", "repo": "emd", "package": "emd"},
-  {"owner": "tvzrn", "repo": "emptty", "package": "emptty"},
-  {"owner": "jhillyerd", "repo": "enmime", "package": "enmime"},
-  {"owner": "googleapis", "repo": "enterprise-certificate-proxy", "package": "enterprise-certificate-proxy-signer"}
+  {
+    "owner": "DCSO",
+    "repo": "balboa",
+    "package": "balboa"
+  },
+  {
+    "owner": "DNSCrypt",
+    "repo": "dnscrypt-proxy",
+    "package": "dnscrypt-proxy"
+  },
+  {
+    "owner": "FiloSottile",
+    "repo": "age",
+    "package": "age"
+  },
+  {
+    "owner": "GoogleCloudPlatform",
+    "repo": "cloudsql-proxy",
+    "package": "cloudsql-proxy"
+  },
+  {
+    "owner": "anacrolix",
+    "repo": "dms",
+    "package": "anacrolix-dms"
+  },
+  {
+    "owner": "aquasecurity",
+    "repo": "trivy",
+    "package": "trivy"
+  },
+  {
+    "owner": "arduino",
+    "repo": "arduino-builder",
+    "package": "arduino-builder"
+  },
+  {
+    "owner": "aymerick",
+    "repo": "douceur",
+    "package": "douceur"
+  },
+  {
+    "owner": "bschaatsbergen",
+    "repo": "cidr",
+    "package": "cidr"
+  },
+  {
+    "owner": "caddyserver",
+    "repo": "caddy",
+    "package": "caddy"
+  },
+  {
+    "owner": "checkpoint-restore",
+    "repo": "checkpointctl",
+    "package": "checkpointctl"
+  },
+  {
+    "owner": "cli",
+    "repo": "cli",
+    "package": "gh"
+  },
+  {
+    "owner": "containers",
+    "repo": "buildah",
+    "package": "buildah"
+  },
+  {
+    "owner": "containers",
+    "repo": "storage",
+    "package": "containers-storage"
+  },
+  {
+    "owner": "crowdsecurity",
+    "repo": "crowdsec",
+    "package": "crowdsec"
+  },
+  {
+    "owner": "crowdsecurity",
+    "repo": "cs-custom-bouncer",
+    "package": "crowdsec-custom-bouncer"
+  },
+  {
+    "owner": "crowdsecurity",
+    "repo": "cs-firewall-bouncer",
+    "package": "crowdsec-firewall-bouncer"
+  },
+  {
+    "owner": "d-Rickyy-b",
+    "repo": "certstream-server-go",
+    "package": "certstream-server-go"
+  },
+  {
+    "owner": "docker",
+    "repo": "distribution",
+    "package": "docker-registry"
+  },
+  {
+    "owner": "dundee",
+    "repo": "gdu",
+    "package": "gdu"
+  },
+  {
+    "owner": "elliotchance",
+    "repo": "c2go",
+    "package": "c2go"
+  },
+  {
+    "owner": "gen2brain",
+    "repo": "cam2ip",
+    "package": "cam2ip"
+  },
+  {
+    "owner": "getsops",
+    "repo": "sops",
+    "package": "sops"
+  },
+  {
+    "owner": "git-lfs",
+    "repo": "git-lfs",
+    "package": "git-lfs"
+  },
+  {
+    "owner": "gitleaks",
+    "repo": "gitleaks",
+    "package": "gitleaks"
+  },
+  {
+    "owner": "go-delve",
+    "repo": "delve",
+    "package": "delve"
+  },
+  {
+    "owner": "go-easygen",
+    "repo": "easygen",
+    "package": "easygen"
+  },
+  {
+    "owner": "google",
+    "repo": "codesearch",
+    "package": "codesearch"
+  },
+  {
+    "owner": "googleapis",
+    "repo": "enterprise-certificate-proxy",
+    "package": "enterprise-certificate-proxy-signer"
+  },
+  {
+    "owner": "goreleaser",
+    "repo": "goreleaser",
+    "package": "goreleaser"
+  },
+  {
+    "owner": "hadolint",
+    "repo": "hadolint",
+    "package": "hadolint"
+  },
+  {
+    "owner": "hashicorp",
+    "repo": "terraform",
+    "package": "terraform"
+  },
+  {
+    "owner": "jhillyerd",
+    "repo": "enmime",
+    "package": "enmime"
+  },
+  {
+    "owner": "keltia",
+    "repo": "dmarc-cat",
+    "package": "dmarc-cat"
+  },
+  {
+    "owner": "kong",
+    "repo": "deck",
+    "package": "deck"
+  },
+  {
+    "owner": "linkedin",
+    "repo": "Burrow",
+    "package": "burrow"
+  },
+  {
+    "owner": "lxc",
+    "repo": "distrobuilder",
+    "package": "distrobuilder"
+  },
+  {
+    "owner": "makeworld-the-better-one",
+    "repo": "amfora",
+    "package": "amfora"
+  },
+  {
+    "owner": "maruel",
+    "repo": "terragrunt",
+    "package": "terragrunt"
+  },
+  {
+    "owner": "mattn",
+    "repo": "efm-langserver",
+    "package": "efm-langserver"
+  },
+  {
+    "owner": "mh-cbon",
+    "repo": "emd",
+    "package": "emd"
+  },
+  {
+    "owner": "mikefarah",
+    "repo": "yq",
+    "package": "yq"
+  },
+  {
+    "owner": "muesli",
+    "repo": "duf",
+    "package": "duf"
+  },
+  {
+    "owner": "pete911",
+    "repo": "certinfo",
+    "package": "certinfo"
+  },
+  {
+    "owner": "rootless-containers",
+    "repo": "bypass4netns",
+    "package": "bypass4netns"
+  },
+  {
+    "owner": "sentriz",
+    "repo": "cliphist",
+    "package": "cliphist"
+  },
+  {
+    "owner": "sigstore",
+    "repo": "cosign",
+    "package": "cosign"
+  },
+  {
+    "owner": "spf13",
+    "repo": "cobra-cli",
+    "package": "cobra-cli"
+  },
+  {
+    "owner": "terraform-linters",
+    "repo": "tflint",
+    "package": "tflint"
+  },
+  {
+    "owner": "tomnomnom",
+    "repo": "assetfinder",
+    "package": "assetfinder"
+  },
+  {
+    "owner": "tvzrn",
+    "repo": "emptty",
+    "package": "emptty"
+  },
+  {
+    "owner": "vincent-petithory",
+    "repo": "dataurl",
+    "package": "dataurl"
+  }
 ]
