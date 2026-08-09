@@ -8,5 +8,55 @@
     "owner": "getsops",
     "repo": "sops",
     "package": "sops"
+  },
+  {
+    "owner": "FiloSottile",
+    "repo": "age",
+    "package": "age"
+  },
+  {
+    "owner": "makeworld-the-better-one",
+    "repo": "amfora",
+    "package": "amfora"
+  },
+  {
+    "owner": "anacrolix",
+    "repo": "dms",
+    "package": "anacrolix-dms"
+  },
+  {
+    "owner": "arduino",
+    "repo": "arduino-builder",
+    "package": "arduino-builder"
+  },
+  {
+    "owner": "tomnomnom",
+    "repo": "assetfinder",
+    "package": "assetfinder"
+  },
+  {
+    "owner": "DCSO",
+    "repo": "balboa",
+    "package": "balboa"
+  },
+  {
+    "owner": "containers",
+    "repo": "buildah",
+    "package": "buildah"
+  },
+  {
+    "owner": "linkedin",
+    "repo": "Burrow",
+    "package": "burrow"
+  },
+  {
+    "owner": "rootless-containers",
+    "repo": "bypass4netns",
+    "package": "bypass4netns"
+  },
+  {
+    "owner": "elliotchance",
+    "repo": "c2go",
+    "package": "c2go"
   }
 ]
