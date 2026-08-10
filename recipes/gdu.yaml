@@ -1,0 +1,28 @@
+# gdu 构建配方 (Phase 1 自动生成)
+repo: dundee/gdu
+package: gdu
+summary: "Pretty fast disk usage analyzer"
+description: |
+  Pretty fast disk usage analyzer
+  (Phase 1 auto-built for all architectures.)
+homepage: https://github.com/dundee/gdu
+section: admin
+
+# 版本策略：锁定上游最新稳定 tag，并在 control 里记录 commit hash
+version_tag: "v5.36.1"
+latest_tag: "v5.36.1"
+commit_hash: "8d64b4f1ef50bf6694cd17e060f9fd80aed3e297"
+upstream_version: "5.36.1"
+
+# Go 构建配置
+ldflags: "-s -w"
+
+# 全架构打包
+target_arches:
+  - amd64
+  - arm64
+  - loong64
+  - riscv64
+
+maintainer: "LeisureLinux <albertxu@freelamp.com>"
+depends: []
