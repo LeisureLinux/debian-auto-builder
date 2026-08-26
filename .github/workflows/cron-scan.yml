@@ -15,6 +15,11 @@ on:
 
   workflow_dispatch:
 
+# Notify 步骤要创建/评论 issue
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   scan-and-build:
     runs-on: ubuntu-latest
@@ -36,7 +41,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BUILDER_PAT }}
         run: |
           set +e
-          go run . -scan tracked.json > scan-result.json
+          # 拉取 deb-builder 的禁用清单，从本次扫描中剔除这些包：
+          # 它们的 recipe 已禁用（disabled: true），派发构建也只会被干净跳过，
+          # 不剔除会导致每日重复派发+重复报缺口。
+          if curl -fsSL https://raw.githubusercontent.com/LeisureLinux/deb-builder/main/disabled.txt \
+              | grep -v '^#' | sed '/^$/d' > /tmp/disabled.txt; then
+            jq --rawfile dis /tmp/disabled.txt \
+               'map(select(.package as $p | ($dis | split("\n") | map(select(length>0)) | index($p)) | not))' \
+               tracked.json > /tmp/tracked-effective.json
+            echo "已剔除 $(($(jq length tracked.json) - $(jq length /tmp/tracked-effective.json))) 个禁用包"
+          else
+            echo "⚠️ 无法获取禁用清单，按全量 tracked.json 扫描"
+            cp tracked.json /tmp/tracked-effective.json
+          fi
+          go run . -scan /tmp/tracked-effective.json > scan-result.json
           code=$?
           set -e
           echo "scanner exit code: $code"
@@ -54,26 +72,37 @@ jobs:
           # Count packages vs gaps
           echo "Packages scanned: $(jq length scan-result.json 2>/dev/null || echo unknown)"
 
-      - name: Trigger deb-builder when gaps found
+      - name: Gap summary (dispatched per-package by scanner)
         if: steps.scan.outputs.gap_detected == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.BUILDER_PAT }}
         run: |
-          echo "⚠️ Gaps detected! Dispatching build to deb-builder..."
-          curl -X POST https://api.github.com/repos/LeisureLinux/deb-builder/dispatches \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -d '{"event_type":"auto-build-required","client_payload":{"source":"debian-auto-builder","arch":"amd64,arm64"}}'
+          # 缺口包已由 Go 扫描器在 scan 阶段逐个 repository_dispatch 到 deb-builder；
+          # 此处只做汇总展示。注意：不要在这里再发不带 package 的 dispatch——
+          # 那会让 receive-trigger 进入 auto 模式全量构建所有 recipe（已踩过坑）。
+          echo "⚠️ 以下缺口包已逐个派发构建："
+          jq -r '.[] | select(.gap_detected) | .package' scan-result.json || true
 
       - name: Notify on gap detection
         if: steps.scan.outputs.gap_detected == 'true'
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const { owner, repo } = context.repo;
-            github.rest.issues.create({
-              owner: owner,
-              repo: repo,
-              title: "⚠️ Debian Architecture Gap Detected",
-              body: `Automated scan detected package(s) missing .deb builds. See the workflow logs for details.`
-            })
+            let gaps = [];
+            try {
+              gaps = JSON.parse(fs.readFileSync('scan-result.json', 'utf8'))
+                .filter(r => r.gap_detected).map(r => r.package);
+            } catch (e) {}
+            const gapList = gaps.length ? gaps.join(', ') : '(详见 workflow 日志)';
+            const TITLE = '⚠️ Debian Architecture Gap Detected';
+            const body = `**${new Date().toISOString().slice(0, 10)} 扫描**发现缺口包：${gapList}\n\n构建结果见 [deb-builder Actions](https://github.com/LeisureLinux/deb-builder/actions?query=event%3Arepository_dispatch)`;
+            // 去重：已有同名 open issue 则追加评论，否则新建，避免每天开新帖
+            const { data: opens } = await github.rest.issues.listForRepo({ owner, repo, state: 'open', per_page: 100 });
+            const existing = opens.find(i => i.title === TITLE);
+            if (existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body });
+              console.log(`commented on existing issue #${existing.number}`);
+            } else {
+              await github.rest.issues.create({ owner, repo, title: TITLE, body });
+              console.log('created new gap issue');
+            }
