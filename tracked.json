@@ -150,11 +150,6 @@
     "package": "goreleaser"
   },
   {
-    "owner": "hadolint",
-    "repo": "hadolint",
-    "package": "hadolint"
-  },
-  {
     "owner": "hashicorp",
     "repo": "terraform",
     "package": "terraform"
