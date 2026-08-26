@@ -205,6 +205,13 @@ func ScanPackage(pkg TrackedPackage) ScanResult {
 		}
 	}
 
+	// 增量构建：若 apt-repo 已有「最新上游版本」的构建产物，直接视为已覆盖。
+	// 没有这条规则时，上游不发双架构 deb 资产的包会被每天重复派发重建。
+	if aptRepoHasCurrentVersion(pkg.Package, latestVersion(result.GitHubInfo)) {
+		result.Action = "skip"
+		return result
+	}
+
 	determineAction(&result)
 	return result
 }
@@ -310,6 +317,92 @@ func triggerBuildForPackage(pkg TrackedPackage) {
 // triggerBuildForPackages sends a single repository_dispatch carrying the full
 // gap list (client_payload.packages = comma-separated names). deb-builder's
 // receive-trigger builds them sequentially in one runner and pushes once.
+// latestVersion 从上游 release 提取版本号（去掉 tag 的 v 前缀）
+func latestVersion(r *GitHubRelease) string {
+	if r == nil || r.TagName == "" {
+		return ""
+	}
+	return strings.TrimPrefix(r.TagName, "v")
+}
+
+var (
+	aptRepoDebNames map[string]bool
+	aptRepoLoaded   bool
+)
+
+// loadAptRepoDebNames 拉取 apt-repo 仓库的 .deb 文件名清单（每次扫描只拉一次）。
+// 获取失败时保持空清单，所有包按「未构建」处理，宁可多建不可漏建。
+func loadAptRepoDebNames() {
+	if aptRepoLoaded {
+		return
+	}
+	aptRepoLoaded = true
+	aptRepoDebNames = map[string]bool{}
+
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		token = os.Getenv("BUILDER_PAT")
+	}
+	url := GitHubAPIBase + "/repos/LeisureLinux/apt-repo/git/trees/main?recursive=1"
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	if token != "" {
+		req.SetBasicAuth("x-access-token", token)
+	}
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("⚠️ 无法获取 apt-repo 文件清单（按未构建处理）: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		fmt.Printf("⚠️ apt-repo 清单请求失败 (%d)，按未构建处理\n", resp.StatusCode)
+		return
+	}
+	var tree struct {
+		Tree []struct {
+			Path string `json:"path"`
+		} `json:"tree"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tree); err != nil {
+		return
+	}
+	for _, t := range tree.Tree {
+		name := t.Path
+		if i := strings.LastIndex(name, "/"); i >= 0 {
+			name = name[i+1:]
+		}
+		if strings.HasSuffix(name, ".deb") {
+			aptRepoDebNames[name] = true
+		}
+	}
+	fmt.Printf("📦 apt-repo 现有 %d 个 .deb 文件\n", len(aptRepoDebNames))
+}
+
+// aptRepoHasCurrentVersion 判断 apt-repo 是否已有 pkg 的 version 版本构建产物。
+// 匹配 <pkg>_<version>*.deb（允许 +LL 等 repack 后缀），任一架构命中即可。
+func aptRepoHasCurrentVersion(pkg, version string) bool {
+	if version == "" {
+		return false
+	}
+	loadAptRepoDebNames()
+	prefix := pkg + "_" + version
+	for name := range aptRepoDebNames {
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		rest := name[len(prefix):]
+		if len(rest) > 0 && (rest[0] == '_' || rest[0] == '+') {
+			return true
+		}
+	}
+	return false
+}
+
 func triggerBuildForPackages(pkgs []TrackedPackage) {
 	if len(pkgs) == 0 {
 		return
