@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -208,18 +209,18 @@ func ScanPackage(pkg TrackedPackage) ScanResult {
 	return result
 }
 
-// determineAction decides skip/rehost/build based on detected gaps.
-// runScan scans all packages, triggers builds for gaps, and returns results.
+// runScan scans all packages, collects gap packages, and triggers ONE batch build.
 func runScan(pkgs []TrackedPackage) ([]ScanResult, error) {
 	results := make([]ScanResult, len(pkgs))
+	var gaps []TrackedPackage
 	for i, pkg := range pkgs {
 		result := ScanPackage(pkg)
 		results[i] = result
 
 		switch {
 		case result.GapDetected:
-			fmt.Printf("⚠️ Package %s: gap detected, triggering build\n", pkg.Package)
-			triggerBuildForPackage(pkg)
+			fmt.Printf("⚠️ Package %s: gap detected\n", pkg.Package)
+			gaps = append(gaps, pkg)
 		case result.InDebian:
 			fmt.Printf("ℹ️ Package %s: Already in Debian (skip)\n", pkg.Package)
 		case result.Action == "rehost":
@@ -227,6 +228,11 @@ func runScan(pkgs []TrackedPackage) ([]ScanResult, error) {
 		default:
 			fmt.Printf("ℹ️ Package %s: %s\n", pkg.Package, result.Action)
 		}
+	}
+	// 批量派发：所有缺口合并为一次 repository_dispatch，deb-builder 端顺序构建、
+	// 统一推送一次，避免 N 个并行运行互相抢推 apt-repo 导致非快进冲突。
+	if len(gaps) > 0 {
+		triggerBuildForPackages(gaps)
 	}
 	return results, nil
 }
@@ -298,8 +304,70 @@ const (
 )
 
 func triggerBuildForPackage(pkg TrackedPackage) {
-	fmt.Printf("🚀 Triggering build for %s/%s\n", pkg.Owner, pkg.Repo)
-	dispatchWorkflow(pkg)
+	triggerBuildForPackages([]TrackedPackage{pkg})
+}
+
+// triggerBuildForPackages sends a single repository_dispatch carrying the full
+// gap list (client_payload.packages = comma-separated names). deb-builder's
+// receive-trigger builds them sequentially in one runner and pushes once.
+func triggerBuildForPackages(pkgs []TrackedPackage) {
+	if len(pkgs) == 0 {
+		return
+	}
+	owner := getenv("BUILD_REPO_OWNER", BuildRepoOwner)
+	repo := getenv("BUILD_REPO_NAME", BuildRepoName)
+
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		token = os.Getenv("BUILDER_PAT")
+	}
+	if token == "" {
+		fmt.Println("⚠️ No GITHUB_TOKEN/BUILDER_PAT set; skipping dispatch")
+		return
+	}
+
+	names := make([]string, 0, len(pkgs))
+	for _, p := range pkgs {
+		names = append(names, p.Package)
+	}
+
+	url := fmt.Sprintf("%s/%s/%s/dispatches", GitHubAPIBase, owner, repo)
+	payload := map[string]interface{}{
+		"event_type": BuildEventType,
+		"client_payload": map[string]string{
+			"packages": strings.Join(names, ","), // 新字段：批量包名列表
+			"package":  names[0],                  // 向后兼容：保留单包字段
+			"source":   "debian-auto-builder",
+			"arch":     "amd64,arm64",
+		},
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Printf("❌ Failed to encode dispatch payload: %v\n", err)
+		return
+	}
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		fmt.Printf("❌ Failed to create dispatch request: %v\n", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.SetBasicAuth("x-access-token", token)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("❌ Dispatch request failed: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		fmt.Printf("✅ Dispatched batch build for %d package(s): %s (event=%s)\n", len(names), strings.Join(names, ", "), BuildEventType)
+	} else {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		fmt.Printf("❌ Dispatch failed (%d): %s\n", resp.StatusCode, string(respBody))
+	}
 }
 
 // dispatchWorkflow sends a GitHub repository_dispatch event to the build repo
