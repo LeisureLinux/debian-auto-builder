@@ -343,7 +343,7 @@ func loadAptRepoDebNames() {
 	if token == "" {
 		token = os.Getenv("BUILDER_PAT")
 	}
-	url := GitHubAPIBase + "/repos/LeisureLinux/apt-repo/git/trees/main?recursive=1"
+	url := GitHubAPIBase + "/LeisureLinux/apt-repo/git/trees/main?recursive=1" // GitHubAPIBase 已含 /repos
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return
@@ -353,16 +353,29 @@ func loadAptRepoDebNames() {
 		req.SetBasicAuth("x-access-token", token)
 	}
 	client := &http.Client{Timeout: 60 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("⚠️ 无法获取 apt-repo 文件清单（按未构建处理）: %v\n", err)
+	var resp *http.Response
+	for attempt := 1; attempt <= 3; attempt++ {
+		resp, err = client.Do(req)
+		if err == nil && resp.StatusCode == 200 {
+			break
+		}
+		if resp != nil {
+			io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+		}
+		fmt.Printf("⚠️ apt-repo 清单请求失败 (attempt %d): %v\n", attempt, err)
+		time.Sleep(time.Duration(attempt*3) * time.Second)
+		req, _ = http.NewRequest(http.MethodGet, url, nil) // body 已消费需重建
+		req.Header.Set("Accept", "application/vnd.github.v3+json")
+		if token != "" {
+			req.SetBasicAuth("x-access-token", token)
+		}
+	}
+	if err != nil || resp == nil || resp.StatusCode != 200 {
+		fmt.Println("⚠️ 无法获取 apt-repo 清单，按未构建处理")
 		return
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		fmt.Printf("⚠️ apt-repo 清单请求失败 (%d)，按未构建处理\n", resp.StatusCode)
-		return
-	}
 	var tree struct {
 		Tree []struct {
 			Path string `json:"path"`
