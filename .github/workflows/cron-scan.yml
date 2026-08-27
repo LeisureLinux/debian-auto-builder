@@ -83,8 +83,13 @@ jobs:
 
       - name: Notify on gap detection
         if: steps.scan.outputs.gap_detected == 'true'
+        # 仓库级 Actions 令牌权限被设为只读(read)，默认 GITHUB_TOKEN 建 issue 会 403。
+        # 改用 BUILDER_PAT（对 debian-auto-builder 有 issues 权限）并加 continue-on-error，
+        # 即便通知仍失败也不拖垮整 job 导致每日失败邮件。
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.BUILDER_PAT }}
           script: |
             const fs = require('fs');
             const { owner, repo } = context.repo;
