@@ -12,6 +12,11 @@ on:
   schedule:
     - cron: '0 3 * * 1'   # 每周一 UTC 03:00 = 北京时间 11:00
   workflow_dispatch:
+    inputs:
+      stale_days:
+        description: '阈值天数（默认 45；填 0 可强制走一次提交以验证写权限）'
+        required: false
+        default: '45'
 
 permissions:
   contents: write
@@ -31,7 +36,7 @@ jobs:
 
       - name: 仅在超过阈值时提交 keepalive
         env:
-          STALE_DAYS: '45'
+          STALE_DAYS: ${{ inputs.stale_days || '45' }}
         run: |
           set -euo pipefail
           last_ts=$(git log -1 --format=%ct)
