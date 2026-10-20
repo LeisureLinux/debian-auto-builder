@@ -1,0 +1,52 @@
+name: Keepalive (reset 60-day schedule timer)
+
+# 背景：公开仓库 60 天没有任何仓库活动（实质是默认分支没有新提交）时，
+# GitHub 会自动禁用所有 schedule 定时工作流。本仓库的定时任务是
+# 「Automated Debian Gap Scanner」，它每天只读扫描、从不产生提交，
+# 于是周期性地被 GitHub 判定为「inactive」并收到禁用预警邮件。
+#
+# 方案：每周检查一次默认分支最新提交时间，只有「超过 45 天没有提交」
+# 时才落一个空提交，把 60 天计时重置。正常活跃时什么都不做，
+# 不产生噪音提交；同时不依赖人工 PAT，避免 token 过期后静默失效。
+on:
+  schedule:
+    - cron: '0 3 * * 1'   # 每周一 UTC 03:00 = 北京时间 11:00
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (需要完整历史以读取提交时间)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 仅在超过阈值时提交 keepalive
+        env:
+          STALE_DAYS: '45'
+        run: |
+          set -euo pipefail
+          last_ts=$(git log -1 --format=%ct)
+          now_ts=$(date +%s)
+          age_days=$(( (now_ts - last_ts) / 86400 ))
+          echo "最近提交: $(date -u -d "@$last_ts" '+%F %T UTC')"
+          echo "距今: ${age_days} 天（阈值 ${STALE_DAYS} 天）"
+
+          if [ "$age_days" -lt "$STALE_DAYS" ]; then
+            echo "✅ 仓库仍然活跃，无需 keepalive 提交（60 天计时未被触发）"
+            exit 0
+          fi
+
+          git config user.name "LeisureLinux Bot"
+          git config user.email "albertxu@freelamp.com"
+          git commit --allow-empty -m "chore(ci): keepalive — 重置 60 天定时任务禁用计时"
+          git push origin HEAD:main
+          echo "✅ 已落空提交，schedule 计时已重置"
